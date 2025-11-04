@@ -1,14 +1,18 @@
 ---
-title: "EDA"
-format: pdf
+title: "Static EDA"
+format: html
 ---
 
+# Packages
+
+```{R}
+library(tidyverse)
+```
 # Data Gathering
 
 In this section, we are simply going to read in the data from both the train and test files. Once we have the data, we will then transform the data types as needed to cast them to the correct tye. Once we finish this, we will save the tibble as an RDS for our Shiny App.
 
 ```{R}
-library(tidyverse)
 # First we can load in the data
 train <- read.csv2("data/train.csv")
 test <- read.csv2("data/test.csv")
@@ -109,4 +113,48 @@ for (factor in factor_columns) {
 
 # Plots
 
-Now that we have our contingency tables and our summaries, we can turn our attention to the plots.
+Now that we have our contingency tables and our summaries, we can turn our attention to the plots. To demonstrate the plotting mechanics, we will use Marital and Job as categorical variables and Balance and Duration and numeric variables, but these are just examples.
+
+## Scatter Plot By Color
+
+```{R}
+g1 <- ggplot(data = bank_data, aes(x = balance, y = duration, color = job))
+g1 + geom_point() + labs(title = "Balance vs. Duration by Job", x = "Balance", y = "Duration", color = "Job")
+```
+
+## Bar Graph
+
+```{R}
+g2 <- ggplot(data = bank_data, aes(x = marital, fill = job))
+g2 + geom_bar()+
+ labs(x = "Marital Status", y = "Count", fill = "Job", title = "Count of Marital Status by Job")
+```
+
+## Faceted Histogram
+
+```{R}
+g3 <- ggplot(data = bank_data, aes(x = age))
+g3 + geom_histogram(bins = 30) + facet_wrap( ~ job) + labs(x = "Age", y = "Count", title = "Distribution of Age Faceted by Job")
+```
+
+## Categorical Heatmap
+
+```{R}
+g4 <- ggplot(data = bank_data, aes(x = marital, y = job))
+g4 + geom_bin_2d() + labs(title = "Heatmap for Marital by Job", x = "Marital", y = "Job", fill = "Count")
+```
+
+## Boxplot
+
+```{R}
+g5 <- ggplot(data = bank_data, aes(x = marital, y = age))
+g5 + geom_boxplot() + labs(title = "Age by Marital Status", x = "Marital Status", y = "Age")
+```
+
+## Scatter
+
+```{R}
+g6 <- ggplot(data = bank_data, aes(x = age, y = balance))
+g6 + geom_point() + labs(title = "Age vs. Balance", x = "Age", y = "Balance")
+```
+
