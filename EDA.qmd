@@ -1,0 +1,112 @@
+---
+title: "EDA"
+format: pdf
+---
+
+# Data Gathering
+
+In this section, we are simply going to read in the data from both the train and test files. Once we have the data, we will then transform the data types as needed to cast them to the correct tye. Once we finish this, we will save the tibble as an RDS for our Shiny App.
+
+```{R}
+library(tidyverse)
+# First we can load in the data
+train <- read.csv2("data/train.csv")
+test <- read.csv2("data/test.csv")
+# Now we can combine it per the project instructions
+bank_data <- bind_rows(train, test)
+# Next lets make some adjustments to make it more usable
+bank_data <- bank_data |> 
+  # We can use mutate to set the correct data types
+  mutate(
+    job = as.factor(job),
+    marital = as.factor(marital),
+    education = as.factor(education),
+    default = as.factor(default),
+    housing = as.factor(housing),
+    loan = as.factor(loan),
+    contact = as.factor(contact),
+    month = as.factor(month),
+    poutcome = as.factor(poutcome),
+    success = as.factor(y),
+    age = as.integer(age),
+    balance = as.integer(balance),
+    day = as.integer(day),
+    duration = as.integer(duration),
+    campaign = as.integer(campaign),
+    pdays = as.integer(pdays),
+    previous = as.integer(previous)
+  ) |>
+  # Since we created a new column "success" out of the indescript y column
+  # we can drop the old one
+  select(-y) |>
+  # Lets also reorder the month factor so it shows up in order
+  mutate(month = fct_relevel(month, "jan", "feb", "mar", "apr", "may", "jun", 
+                             "jul", "aug", "sep", "oct", "nov", "dec"))
+# Now, we can save it as an RDS for later
+saveRDS(bank_data, "data/full.rds")
+```
+
+# Contingency Tables
+
+Now that the data is loaded and the types are correct, we can move on the the contingency tables. 
+
+## One-Way Contingency Tables
+
+```{R}
+# First lets get all of the column names that are factors and ints
+factor_columns <- bank_data |> select(where(is.factor)) |> names()
+int_columns <- bank_data |> select(where(is.integer)) |> names()
+
+# For one-way, we can simply loop through the factor columns to get the tables
+for (factor in factor_columns) {
+  cat("\nFactor:", factor)
+  print(table(bank_data[[factor]]))
+}
+```
+
+## Two-Way Contingency Tables
+```{R}
+# For two-way contingency tables, we can use a nested for loop
+# The outer loop will loop along the sequence of the columns until the second to last
+for (i in seq_along(factor_columns)[-length(factor_columns)]) {
+  # The inner look will loop through columns after the selected column to the last
+  for (j in seq.int(i + 1, length(factor_columns))) {
+    # Since i and j are integers, we need to get the name of the column
+    factor1 <- factor_columns[i]
+    factor2 <- factor_columns[j]
+    # Now we can simply print
+    cat("\nFactors:", factor1, "x", factor2, "\n")
+    print(table(bank_data[[factor1]], bank_data[[factor2]]))
+  }
+}
+```
+
+# Data Summaries
+
+Now that the contingency tables are completed, we can turn our attention to creating summaries for our quantitative variables at the levels of categorical variables.
+
+```{R}
+# We can iterate though out factor columns and numeric columns in a nested for 
+# loop to create a summary table for each category
+for (factor in factor_columns) {
+  for (int_var in int_columns) {
+    int_by_cat <- bank_data |>
+      # first we group by the factor
+      group_by(.data[[factor]]) |>
+      # then we summarize the current int_var for that factor
+      summarise(
+        n = n(),
+        mean = mean(.data[[int_var]]),
+        median = median(.data[[int_var]]),
+        sd = sd(.data[[int_var]])
+      )
+    # Finally, we print
+    cat("\n", factor, "by", int_var, "\n")
+    print(int_by_cat)
+  }
+}
+```
+
+# Plots
+
+Now that we have our contingency tables and our summaries, we can turn our attention to the plots.
