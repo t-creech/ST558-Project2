@@ -103,7 +103,7 @@ server <- function(input, output, session) {
     data_table <- data_table |> filter(.data[[input$cat1]] %in% input$cat_vals1)
     data_table <- data_table |> filter(.data[[input$cat2]] %in% input$cat_vals2)
     
-    # Filter Numerics
+    # Filter Numeric
     rng1 <- input$num_rng1
     rng2 <- input$num_rng2
     data_table <- data_table |> filter(.data[[input$num1]] >= rng1[1] & .data[[input$num1]] <= rng1[2])
@@ -113,7 +113,28 @@ server <- function(input, output, session) {
     
   })
   
-
+  ### Data Download Functionality
+  output$download <- renderUI({
+    tagList(
+      br(),
+      downloadButton("download_csv", "Download subset as CSV"),
+      br(), br(),
+      DT::dataTableOutput("data_table")
+    )
+  })
+  
+  output$data_table <- DT::renderDataTable({
+    DT::datatable(
+      filtered$data,
+      options = list(pageLength = 20, scrollX = TRUE),
+      filter = "top"
+    )
+  })
+  
+  output$download_csv <- downloadHandler(
+    filename = function() {paste('bank_data-', Sys.Date(), '.csv', sep='')},
+    content = function(file) {write.csv(filtered$data, file)}
+  )
 }
 
 # Run the application 
