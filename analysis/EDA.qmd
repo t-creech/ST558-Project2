@@ -151,10 +151,10 @@ g5 <- ggplot(data = bank_data, aes(x = marital, y = age))
 g5 + geom_boxplot() + labs(title = "Age by Marital Status", x = "Marital Status", y = "Age")
 ```
 
-## Scatter
+## Density
 
 ```{R}
-g6 <- ggplot(data = bank_data, aes(x = age, y = balance))
-g6 + geom_point() + labs(title = "Age vs. Balance", x = "Age", y = "Balance")
+g6 <- ggplot(data = bank_data, aes(x = age))
+g6 + geom_density() + labs(title = "Density of Age", x = "Age", y = "Density")
 ```
 
