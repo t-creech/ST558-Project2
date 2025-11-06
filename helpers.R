@@ -1,5 +1,6 @@
-#Functions and information to help in the app functionality
-
+### Author: Thad Creech
+### Date: 11/5/2025
+### Purpose: Functions to help support shiny app
 
 # Data loader function to load the data in from and rds file
 load_bank_data <- function() {

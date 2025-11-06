@@ -1,3 +1,7 @@
+### Author: Thad Creech
+### Date: 11/5/2025
+### Purpose: Creat a shiny app to explore banking data from Kaggle
+
 
 library(shiny)
 library(shinyWidgets)
@@ -126,7 +130,7 @@ server <- function(input, output, session) {
       br(),
       tags$img(
         src = "bank_image.jpg",
-        style = "max-width:100%; height:auto"
+        width = "100%"
       ),
       h3("Purpose of this app"),
       p("This app was created to allow users to explore the Bank Marketing dataset. The data is sourced from direct marketing campaigns of a Portuguese
