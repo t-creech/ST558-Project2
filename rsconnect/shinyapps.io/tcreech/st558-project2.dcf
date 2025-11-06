@@ -5,6 +5,8 @@ account: tcreech
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 15919584
-bundleId: 11108495
+bundleId: 11138081
 url: https://tcreech.shinyapps.io/st558-project2/
 version: 1
+asMultiple: FALSE
+asStatic: FALSE

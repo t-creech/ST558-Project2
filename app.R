@@ -3,6 +3,7 @@ library(shiny)
 library(shinyWidgets)
 library(shinyalert)
 library(tidyverse)
+library(shinycssloaders)
 
 source("helpers.R")
 
@@ -14,6 +15,7 @@ num_vars <- names(select(all_data, where(is.numeric)))
 # Define UI
 ui <- fluidPage(
   h2("Bank Marketing Data Explorer"),
+  # Sidebar layout to include categorical and numerical filtering for two vars
   sidebarLayout(
     sidebarPanel(
       h2("Choose filter on panel below then click Apply."),
@@ -51,6 +53,7 @@ ui <- fluidPage(
       uiOutput("num_range2"),
       actionButton("apply","Apply")
     ),
+    # Main Panel to include three tabs for About, Dowload, and Explor
     mainPanel(
       tabsetPanel(
         tabPanel("About", uiOutput("about")),
@@ -63,9 +66,9 @@ ui <- fluidPage(
 
 
 server <- function(input, output, session) {
+  options(shiny.error = browser)
   ### Code for dropdowns and sliders
   output$cat_levels1 <- renderUI({
-    validate(need(nrow(filtered$data) > 0, "No rows in current subset. Adjust filters and click Apply."))
     req(input$cat1)
     lvls <- sort(unique(all_data[[input$cat1]]))
     pickerInput(
@@ -176,6 +179,7 @@ server <- function(input, output, session) {
   
   ### Data Download Functionality
   output$download <- renderUI({
+    validate(need(nrow(filtered$data) > 0, "No rows in current subset. Adjust filters and click Apply."))
     tagList(
       br(),
       downloadButton("download_csv", "Download subset as CSV"),
@@ -184,7 +188,9 @@ server <- function(input, output, session) {
     )
   })
   
+  # code to render data table
   output$data_table <- DT::renderDataTable({
+    validate(need(nrow(filtered$data) > 0, "No rows in current subset. Adjust filters and click Apply."))
     DT::datatable(
       filtered$data,
       options = list(pageLength = 20, scrollX = TRUE),
@@ -192,6 +198,7 @@ server <- function(input, output, session) {
     )
   })
   
+  # code to support download using downloadHandler
   output$download_csv <- downloadHandler(
     filename = function() {paste('bank_data-', Sys.Date(), '.csv', sep='')},
     content = function(file) {write.csv(filtered$data, file, row.names = FALSE)}
@@ -199,9 +206,10 @@ server <- function(input, output, session) {
   
   ### Explore Tab
   output$explore <- renderUI({
-    validate(nrow(filtered$data) > 0, "No rows in current subset. Adjust filters and click Apply.")
+    validate(need(nrow(filtered$data) > 0, "No rows in current subset. Adjust filters and click Apply."))
     tagList(
       h3("Explore your subset"),
+      # Radiobuttons are used to select type of summary
       radioButtons(
         "exp_mode", "Show:",
         c("Categorical Summaries" = "cat",
@@ -287,12 +295,13 @@ server <- function(input, output, session) {
         ),
         # Print Plot
         br(),
-        plotOutput("plot_out", height = 420)
+        withSpinner(plotOutput("plot_out", height = 420))
       )
     )
   })
   
-  # Contingency Table Creation
+  ### Contingency Table Creation
+  # One-way table
   output$oneway_table <- renderTable({
     req(input$oneway)
     d <- filtered$data
@@ -301,7 +310,7 @@ server <- function(input, output, session) {
     colnames(tab) <- c(var, "Frequency")
     tab
   }, rownames = FALSE)
-  
+  #Two-way table
   output$twoway_table <- renderTable({
     req(input$twoway_a)
     req(input$twoway_b)
@@ -348,6 +357,7 @@ server <- function(input, output, session) {
   
   # Plot Creation
   output$plot_out <- renderPlot({
+    validate(need(nrow(filtered$data) > 0, "No rows in current subset. Adjust filters and click Apply."))
     req(input$plot_type)
     d <- filtered$data
     plot_type <- input$plot_type
