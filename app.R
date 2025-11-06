@@ -7,12 +7,11 @@ library(tidyverse)
 source("helpers.R")
 
 # Load data and obtain variable lists
-
 all_data <- load_bank_data()
 cat_vars <- names(select(all_data, where(is.factor)))
 num_vars <- names(select(all_data, where(is.numeric)))
 
-# Define UI for application that draws a histogram
+# Define UI
 ui <- fluidPage(
   h2("Bank Marketing Data Explorer"),
   sidebarLayout(
@@ -66,6 +65,7 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   ### Code for dropdowns and sliders
   output$cat_levels1 <- renderUI({
+    validate(need(nrow(filtered$data) > 0, "No rows in current subset. Adjust filters and click Apply."))
     req(input$cat1)
     lvls <- sort(unique(all_data[[input$cat1]]))
     pickerInput(
@@ -170,7 +170,7 @@ server <- function(input, output, session) {
           href = "https://www.kaggle.com/datasets/prakharrathi25/banking-dataset-marketing-targets",
           "Banking Dataset - Marketing Targets"
         )
-      ),
+      )
     )
   })
   
@@ -199,6 +199,7 @@ server <- function(input, output, session) {
   
   ### Explore Tab
   output$explore <- renderUI({
+    validate(nrow(filtered$data) > 0, "No rows in current subset. Adjust filters and click Apply.")
     tagList(
       h3("Explore your subset"),
       radioButtons(
@@ -230,7 +231,7 @@ server <- function(input, output, session) {
       conditionalPanel("input.exp_mode == 'num'",
         fluidRow(
           column(6, selectizeInput("num_summary_var", "Numeric Variable", choices = num_vars, selected = num_vars[1])),
-          column(6, selectizeInput("cat_by", "Categorical Variable to Summarize By", choices = c("None", cat_vars), selected = cat_vars[1]))
+          column(6, selectizeInput("cat_by", "Categorical Variable to Summarize By (Optional)", choices = c("None", cat_vars), selected = "None"))
         ),
         br(),
         tableOutput("num_table")
@@ -269,7 +270,7 @@ server <- function(input, output, session) {
         conditionalPanel("input.plot_type == 'hist'",
          fluidRow(
            column(6, selectizeInput("hist_num_var_x", "Numeric Variable for X Axis", choices = num_vars, selected = num_vars[[1]])),
-           column(6, selectizeInput("facet_by", "Facet By (Optional)", choices = c("None", cat_vars), selected = "None"))
+           column(6, selectizeInput("hist_facet_by", "Facet By (Optional)", choices = c("None", cat_vars), selected = "None"))
          )                 
         ),
         conditionalPanel("input.plot_type == 'cat_heat'",
@@ -286,7 +287,7 @@ server <- function(input, output, session) {
         ),
         # Print Plot
         br(),
-        plotOutput("plot_out")
+        plotOutput("plot_out", height = 420)
       )
     )
   })
@@ -320,15 +321,17 @@ server <- function(input, output, session) {
     num <- input$num_summary_var
     cat <- input$cat_by
     if (cat == "None") {
-      int_by_cat <- d |>
+      d |>
         summarise(
           n = n(),
           mean = mean(.data[[num]]),
           median = median(.data[[num]]),
-          sd = sd(.data[[num]])
+          sd = sd(.data[[num]]),
+          min = min(.data[[num]]),
+          max = max(.data[[num]])
         )
     } else {
-      int_by_cat <- d |>
+      d |>
         # first we group by the factor
         group_by(.data[[cat]]) |>
         # then we summarize the current int_var for that factor
@@ -336,15 +339,77 @@ server <- function(input, output, session) {
           n = n(),
           mean = mean(.data[[num]]),
           median = median(.data[[num]]),
-          sd = sd(.data[[num]])
+          sd = sd(.data[[num]]),
+          min = min(.data[[num]]),
+          max = max(.data[[num]])
         )
     }
   })
   
   # Plot Creation
-  
-  
-  
+  output$plot_out <- renderPlot({
+    req(input$plot_type)
+    d <- filtered$data
+    plot_type <- input$plot_type
+    if(plot_type == "density"){
+      req(input$dens_num_var)
+      x_var <- input$dens_num_var
+      g <- ggplot(data = d, aes(x = .data[[x_var]]))
+      g + geom_density() + labs(title = paste("Density of", x_var), x = x_var, y = "Density")
+    } else if (plot_type == "scatter") {
+      req(input$scatter_num_var_x)
+      req(input$scatter_num_var_y)
+      req(input$scatter_cat_var)
+      x_var <- input$scatter_num_var_x
+      y_var <- input$scatter_num_var_y
+      color <- input$scatter_cat_var
+      if (color == "None") {
+        g <- ggplot(data = d, aes(x = .data[[x_var]], y = .data[[y_var]]))
+        g + geom_point() + labs(title = paste(x_var, "vs.", y_var), x = x_var, y = y_var)
+      } else {
+        g <- ggplot(data = d, aes(x = .data[[x_var]], y = .data[[y_var]], color = .data[[color]]))
+        g + geom_point() + labs(title = paste(x_var, "vs.", y_var, "by", color), x = x_var, y = y_var, color = color)
+      }
+    } else if (plot_type == "bar") {
+      req(input$bar_cat_var_x)
+      req(input$bar_fill_by)
+      x_var <- input$bar_cat_var_x
+      fill <- input$bar_fill_by
+      if (fill == "None") {
+        g <- ggplot(data = d, aes(x = .data[[x_var]]))
+        g + geom_bar()+ labs(x = x_var, y = "Count", title = paste("Count of", x_var))
+      } else {
+        g <- ggplot(data = d, aes(x = .data[[x_var]], fill = .data[[fill]]))
+        g + geom_bar()+ labs(x = x_var, y = "Count", fill = fill, title = paste("Count of", x_var, "by", fill))
+      }
+    } else if (plot_type == "hist") {
+      req(input$hist_num_var_x)
+      req(input$hist_facet_by)
+      x_var <- input$hist_num_var_x
+      facet_by <- input$hist_facet_by
+      if(facet_by == "None"){
+        g <- ggplot(data = d, aes(x = .data[[x_var]]))
+        g + geom_histogram(bins = 30) + labs(x = x_var, y = "Count", title = paste("Distribution of", x_var))
+      } else {
+        g <- ggplot(data = d, aes(x = .data[[x_var]]))
+        g + geom_histogram(bins = 30) + facet_wrap(paste("~", facet_by)) + labs(x = x_var, y = "Count", title = paste("Distribution of", x_var, "Faceted by", facet_by))
+      }
+    } else if (plot_type == "cat_heat") {
+      req(input$heat_cat_var_x)
+      req(input$heat_cat_var_y)
+      x_var <- input$heat_cat_var_x
+      y_var <- input$heat_cat_var_y
+      g <- ggplot(data = d, aes(x = .data[[x_var]], y = .data[[y_var]]))
+      g + geom_bin_2d() + labs(title = paste("Heatmap for", x_var, "by", y_var), x = x_var, y = y_var, fill = "Count")
+    } else if (plot_type == "box"){
+      req(input$box_cat_var_x)
+      req(input$box_num_var_y)
+      x_var <- input$box_cat_var_x
+      y_var <- input$box_num_var_y
+      g <- ggplot(data = d, aes(x = .data[[x_var]], y = .data[[y_var]]))
+      g + geom_boxplot() + labs(title = paste(y_var, "by", x_var), x = x_var, y = y_var)
+    }
+  }, res = 100)
 }
 
 # Run the application 
